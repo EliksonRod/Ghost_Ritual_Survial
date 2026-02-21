@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using static UnityEngine.Rendering.DebugUI;
 
 public class InputForPlayer : MonoBehaviour
 {
@@ -14,9 +15,6 @@ public class InputForPlayer : MonoBehaviour
     [Header("Interaction Values")]
     public bool interact;
     public bool stopInteract;
-    public bool useFlashlight;
-    public bool useBlacklight;
-    public bool fire;
 
     [Header("Item Usage Values")]
     public bool isPressed;
@@ -25,7 +23,6 @@ public class InputForPlayer : MonoBehaviour
 
     [Header("Mouse Cursor Settings")]
     public bool cursorLocked = true;
-    public bool cursorInputForLook = true;
 
     int currentItemIndex = -1;
 
@@ -66,32 +63,6 @@ public class InputForPlayer : MonoBehaviour
         StopInteractInput(value.isPressed);
     }
 
-    public void OnUseFlashlight(InputValue value)
-    {
-        UseFlashlightInput(value.isPressed);
-    }
-
-    public void OnUseBlacklight(InputValue value)
-    {
-        UseBlacklightInput(value.isPressed);
-    }
-    public void OnKey1(InputValue value)
-    {
-        UseItem(1);
-    }
-    public void OnKey2(InputValue value)
-    {
-        UseItem(2);
-    }
-    public void OnKey3(InputValue value)
-    {
-        UseItem(3);
-    }
-    public void OnKey4(InputValue value)
-    {
-        UseItem(4);
-    }
-
     public void UseItem(int newItemIndex)
     {
         isPressed = true;
@@ -115,8 +86,6 @@ public class InputForPlayer : MonoBehaviour
     private void SprintInput(bool sprintInput) => sprint = sprintInput;
     private void InteractInput(bool interactInput) => interact = interactInput;
     private void StopInteractInput(bool stopInteractInput) => stopInteract = stopInteractInput;
-    private void UseFlashlightInput(bool useFlashlightInput) => useFlashlight = useFlashlightInput;
-    private void UseBlacklightInput(bool useBlacklightInput) => useBlacklight = useBlacklightInput;
 
     private void OnApplicationFocus(bool hasFocus)
     {

@@ -1,19 +1,24 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using static UnityEngine.Rendering.DebugUI;
 
 public class Flashlight : MonoBehaviour
 {
 
     [SerializeField] GameObject flashlightObject; // Reference to the flashlight GameObject
     [SerializeField] GameObject blacklightObject; // Reference to the blacklight GameObject
-    bool flashlightOn = false; // Track the state of the flashlight
     bool blacklightOn = false; // Track the state of the blacklight
+
     ControllerForPlayer PlayerController; // Reference to the player's controller script
+    InputForPlayer playerInput; // Reference to the player's input script
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        PlayerController = ControllerForPlayer.Instance; // Get the instance of the InputForPlayer script
+        //PlayerController = ControllerForPlayer.Instance; // Get the instance of the InputForPlayer script
+        //PlayerInput = InputForPlayer.Instance; // Get the instance of the ControllerForPlayer script
+        PlayerController = GetComponent<ControllerForPlayer>(); // Get the instance of the InputForPlayer script\
+        playerInput = GetComponent<InputForPlayer>();
     }
 
     void Update()
@@ -28,27 +33,31 @@ public class Flashlight : MonoBehaviour
         }
     }
 
-    public void ToggleFlashlight(InputAction.CallbackContext context)
+    void OnUseFlashlight(InputValue value)
     {
-        if (blacklightObject.activeInHierarchy) return; // Prevent toggling flashlight if blacklight is active
-        flashlightObject.SetActive(!flashlightObject.activeSelf);
+        if (value.isPressed && !blacklightObject.activeInHierarchy)
+        {
+            flashlightObject.SetActive(!flashlightObject.activeSelf);
+        }
     }
 
-    public void UseBlacklight(InputAction.CallbackContext context)
+    void OnUseBlacklight(InputValue value)
     {
-        blacklightOn = true;
-        flashlightObject.SetActive(false);
-        blacklightObject.SetActive(true);
+        if (value.isPressed)
+        {
+            blacklightOn = true;
+            flashlightObject.SetActive(false);
+            blacklightObject.SetActive(true);
+        }
     }
-
-    public void StopBlacklight(InputAction.CallbackContext context)
+    void OnKillBlacklight(InputValue value)
     {
-        if (context.canceled)
+        if (!value.isPressed)
         {
             blacklightOn = false;
             blacklightObject.SetActive(false); // Ensure blacklight is turned off when the input is released
             PlayerController.ResetFov(); // Reset FOV to default when blacklight is turned off
             flashlightObject.SetActive(true);
-        }
+        } 
     }
 }

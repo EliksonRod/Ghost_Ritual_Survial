@@ -1,7 +1,8 @@
 ﻿using Unity.Cinemachine;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using Unity.VisualScripting;
+using UnityEngine.Windows;
 
 //[RequireComponent(typeof(CharacterController))]
 public class ControllerForPlayer : MonoBehaviour
@@ -18,7 +19,7 @@ public class ControllerForPlayer : MonoBehaviour
     [Header("Jump Settings")]
     [SerializeField] float jumpHeight = 2f;
     [SerializeField] float gravity = -20f;
-    float jumpCooldown = 0.2f;
+    [SerializeField]float jumpCooldown = 0.2f;
 
     [Header("Grounded Settings")]
     [SerializeField] float groundedOffset = .85f;
@@ -27,6 +28,8 @@ public class ControllerForPlayer : MonoBehaviour
 
     [Header("Camera Settings")]
     public CinemachineCamera virtualCamera;
+    [Header("Mouse Cursor Settings")]
+    bool cursorLocked = true;
     [HideInInspector] public float originalFov;
     [SerializeField] float maxCameraPitch = 70f;
     [SerializeField] float minCameraPitch = -70f;
@@ -44,12 +47,8 @@ public class ControllerForPlayer : MonoBehaviour
     [Header("Interact Settings")]
     public bool isInteracting = false;
 
-    [Header("Character Input Values")]
-    [HideInInspector] public Vector2 move;
-    [HideInInspector] public Vector2 look;
-    [HideInInspector] public bool sprint;
-
     private CharacterController characterController;
+    private InputForPlayer playerInput;
     private Vector3 velocity;
     private bool isGrounded;
     private float jumpCooldownTimer;
@@ -58,54 +57,34 @@ public class ControllerForPlayer : MonoBehaviour
     void Awake()
     {
         characterController = GetComponent<CharacterController>();
-        var playerInput = GetComponent<PlayerInput>();
+        playerInput = GetComponent<InputForPlayer>();
         Instance = this;
     }
 
     void Start()
     {
-        if (virtualCamera == null)
-        {
-            Debug.LogError("Cinemachine Virtual Camera is not assigned.");
-        }
         originalFov = virtualCamera.Lens.FieldOfView;
         //currentFov = Mathf.Clamp(currentFov, (originalFov * (60f / 100f)), originalFov);
     }
 
     void Update()
     {
-        HandleMovement();
-        HandleGravity();
+        PlayerMovement();
+        UpdateGravity();
+        PlayerJump();
         GroundedCheck();
     }
 
-    public void Look(InputAction.CallbackContext context)
+    private void LateUpdate()
     {
-        //if (canUseInput == false) return;
-        look = context.ReadValue<Vector2>();
-        //if (isInteracting) { return; }
-
-        Vector2 lookInput = look;
-        cameraPitch += lookInput.y * rotationSpeed;
-        cameraPitch = Mathf.Clamp(cameraPitch, minCameraPitch, maxCameraPitch);
-
-        virtualCamera.transform.localEulerAngles = new Vector3(cameraPitch, 0, 0);
-        transform.Rotate(Vector3.up * lookInput.x * rotationSpeed);
-    }
-    public void Move(InputAction.CallbackContext context)
-    {
-        move = context.ReadValue<Vector2>();
+        CameraRotation();
     }
 
-    public void Sprint(InputAction.CallbackContext context)
-    {
-        sprint = context.ReadValueAsButton();
-    }
-    void HandleMovement()
+    void PlayerMovement()
     {
         if (isInteracting)
         {
-            move = Vector2.zero;
+            playerInput.move = Vector2.zero;
             velocity = Vector3.zero;
 
             headBob.AmplitudeGain = idleBobAmp;
@@ -115,10 +94,10 @@ public class ControllerForPlayer : MonoBehaviour
 
         HeadBob();
 
-        Vector2 input = move;
+        Vector2 input = playerInput.move;
         Vector3 moveDirection = transform.right * input.x + transform.forward * input.y;
 
-        float targetSpeed = sprint ? sprintSpeed : walkSpeed;
+        float targetSpeed = playerInput.sprint ? sprintSpeed : walkSpeed;
 
         if (moveDirection != Vector3.zero)
         {
@@ -134,11 +113,11 @@ public class ControllerForPlayer : MonoBehaviour
         characterController.Move(new Vector3(velocity.x, 0, velocity.z) * Time.deltaTime);
     }
 
-    public void HandleRotation()
+    void CameraRotation()
     {
         if (isInteracting) { return; }
 
-        Vector2 lookInput = look;
+        Vector2 lookInput = playerInput.look;
         cameraPitch += lookInput.y * rotationSpeed;
         cameraPitch = Mathf.Clamp(cameraPitch, minCameraPitch, maxCameraPitch);
 
@@ -151,7 +130,7 @@ public class ControllerForPlayer : MonoBehaviour
         isGrounded = Physics.CheckSphere(spherePosition, groundedRadius, groundLayers, QueryTriggerInteraction.Ignore);
     }
 
-    void HandleGravity()
+    void UpdateGravity()
     {
         if (isGrounded && velocity.y < 0)
         {
@@ -161,13 +140,26 @@ public class ControllerForPlayer : MonoBehaviour
         characterController.Move(Vector3.up * velocity.y * Time.deltaTime);
     }
 
-    public void HandleJumping(InputAction.CallbackContext context)
+    void PlayerJump()
     {
-        if (isGrounded && context.performed)
+        if (jumpCooldownTimer > 0)
         {
-            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-            jumpCooldownTimer = jumpCooldown;
+            jumpCooldownTimer -= Time.deltaTime;
         }
+
+        if (isGrounded)
+        {
+            if (playerInput.jump && jumpCooldownTimer <= 0)
+            {
+                velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+                jumpCooldownTimer = jumpCooldown;
+            }
+        }
+        else
+        {
+            playerInput.jump = false;
+        }
+
     }
 
     public void ChangeFov(float fieldOfView)
@@ -183,9 +175,9 @@ public class ControllerForPlayer : MonoBehaviour
     }
     void HeadBob()
     {
-        float moveMagnitude = move.magnitude;
-        float targetAmp = moveMagnitude > 0 ? (sprint ? sprintBobAmp : walkBobAmp) : idleBobAmp;
-        float targetFreq = moveMagnitude > 0 ? (sprint ? sprintBobFreq : walkBobFreq) : idleBobFreq;
+        float moveMagnitude = playerInput.move.magnitude;
+        float targetAmp = moveMagnitude > 0 ? (playerInput.sprint ? sprintBobAmp : walkBobAmp) : idleBobAmp;
+        float targetFreq = moveMagnitude > 0 ? (playerInput.sprint ? sprintBobFreq : walkBobFreq) : idleBobFreq;
 
         headBob.AmplitudeGain = Mathf.Lerp(headBob.AmplitudeGain, targetAmp, Time.deltaTime * headBobAcceleration);
         headBob.FrequencyGain = Mathf.Lerp(headBob.FrequencyGain, targetFreq, Time.deltaTime * headBobAcceleration);

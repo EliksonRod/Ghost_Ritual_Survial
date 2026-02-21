@@ -24,7 +24,7 @@ public class InteractionManager : MonoBehaviour
 
     public bool showHighlight;
 
-    private InputForPlayer _input;
+    //private InputForPlayer _input;
     private IInteractable currentInteractable;
 
     private GameObject defaultHighlightObj;
@@ -46,7 +46,7 @@ public class InteractionManager : MonoBehaviour
 
     private void Start()
     {
-        _input = FindAnyObjectByType<InputForPlayer>();
+       // _input = FindAnyObjectByType<InputForPlayer>();
 
         showHighlight = true;
         sendRaycast = true;
@@ -104,11 +104,11 @@ public class InteractionManager : MonoBehaviour
                 Debug.Log("Interactable found: " + hit.collider.name);
                 Highlight();
 
-                if (_input.interact)// && interactionUI.activeSelf)
+                if (canDragDoor)// && interactionUI.activeSelf)
                 {
                     currentInteractable.Interact(); 
                     UnHighlight();
-                    _input.interact = false;
+                    //_input.interact = false;
                 }
             }
             else
